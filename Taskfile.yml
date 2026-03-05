@@ -1,0 +1,194 @@
+version: "3"
+
+silent: true
+
+vars:
+  RUFF_ENABLE: '{{ .RUFF_ENABLE | default "true" }}'
+  FLAKE_ENABLE: '{{ .FLAKE_ENABLE | default "true" }}'
+  MYPY_ENABLE: '{{ .MYPY_ENABLE | default "true" }}'
+  VULTURE_ENABLE: '{{ .VULTURE_ENABLE | default "true" }}'
+
+  ENVIRONMENT: '{{ .ENVIRONMENT | default "production" }}'
+
+  POETRY_URL: '{{ .POETRY_REPOSITORIES_LIBS_URL | default "https://pypi.itpc.dev/itpc/libs" }}'
+  POETRY_USERNAME: "{{ .POETRY_HTTP_BASIC_LIBS_USERNAME }}"
+  POETRY_PASSWORD: "{{ .POETRY_HTTP_BASIC_LIBS_PASSWORD }}"
+
+  COMPILE_IMAGE: registry.itpc.ru/docker/compile/python:12.2
+  LINT_IMAGE: registry.itpc.ru/docker/tools/python/linter:12.4
+  TEST_IMAGE: registry.itpc.ru/docker/tools/python/tester:12.4
+
+env:
+  POETRY_VIRTUALENVS_CREATE: "false"
+
+tasks:
+  default:
+    deps:
+      - info
+
+  info:
+    desc: Prints application info
+    cmds:
+      - echo "---"
+      - poetry version
+      - echo "---"
+
+  # Lint
+  lint:
+    desc: Linters for application cleanup
+    cmds:
+      - task: lint-ruff
+      - task: lint-flake
+      - task: lint-mypy
+      - task: lint-vulture
+  lint-ruff:
+    desc: Linters for application cleanup
+    cmds:
+      - echo "-- lint-ruff (enabled={{ .RUFF_ENABLE }}) --"
+      - '{{ if eq .RUFF_ENABLE "true" }} ruff check {{ .CLI_ARGS }} . {{ end }}'
+  lint-flake:
+    desc: Linters for application cleanup
+    cmds:
+      - echo "-- lint-flake (enabled={{ .FLAKE_ENABLE }}) --"
+      - '{{ if eq .FLAKE_ENABLE "true" }} flake8 . {{ end }}'
+  lint-mypy:
+    desc: Linters for application cleanup
+    cmds:
+      - echo "-- lint-mypy (enabled={{ .MYPY_ENABLE }}) --"
+      - '{{ if eq .MYPY_ENABLE "true" }} poetry install --only linter --no-root {{ end }}'
+      - '{{ if eq .MYPY_ENABLE "true" }} mypy --show-error-codes . {{ end }}'
+  lint-vulture:
+    desc: Linters for application cleanup
+    cmds:
+      - echo "-- lint-vulture (enabled={{ .VULTURE_ENABLE }}) --"
+      - '{{ if eq .VULTURE_ENABLE "true" }} vulture . .vulture-whitelist.cfg {{ end }}'
+
+  vulture-whitelist:
+    desc: Generate vulture-whitelist.cfg
+    cmd: vulture . --make-whitelist > .vulture-whitelist.cfg || true
+
+  # Test
+  test:
+    desc: Base testing with coverage
+    cmds:
+      - task: deps-install
+      - task: test-pytest
+        vars:
+          CLI_ARGS: '{{ .CLI_ARGS | default "-vx --cov" }}'
+  coverage:
+    desc: Calculate code coverage
+    cmds:
+      - rm -rf htmlcov
+      - task: test
+        vars:
+          CLI_ARGS: '--cov {{ .CLI_ARGS | default "-x" }}'
+  test-pytest:
+    desc: Run unit tests
+    cmd: py.test tests {{ .ARGS }}
+    vars:
+      ARGS: '{{ .CLI_ARGS | default "-vx" }}'
+
+  # Format
+  format:
+    desc: Use code autoformatter
+    cmd: ruff format
+
+  # Deps
+  deps:
+    desc: Обновление зависимостей
+    cmd: poetry lock {{ if not (eq .FROZEN "true") }} --regenerate {{ end }}
+  deps-install:
+    cmd: poetry install --no-root --only {{ .GROUPS }}
+    vars:
+      GROUPS:
+        sh: case "{{ .ENVIRONMENT }}" in
+          "develop" ) echo "main,tests,linter,dev" ;;
+          "linting" ) echo "main,linter" ;;
+          "testing" ) echo "main,tests" ;;
+          * ) echo "main" ;;
+          esac
+
+  version:
+    cmds:
+      - task: _fish
+        vars:
+          CLI_ARGS: >
+            for f in (find . -maxdepth 2 -name "__init__.py");
+            sed -e "s|__version__ = .*|__version__ = \\"{{ .V }}\\"|" $f > $f.bak;
+            mv $f.bak $f;
+            end
+      - poetry version {{ .V }}
+    vars:
+      V:
+        sh: ./setup.py get-version
+
+  # Build
+  publish:
+    desc: Publish library
+    cmds:
+      - task: build
+      - task: push
+  build:
+    desc: Build wheel package
+    cmds:
+      - poetry build
+  push:
+    desc: Push library to PyPi
+    cmds:
+      - poetry publish -n {{ if not (eq .PUSH "true") }} --dry-run {{ end }}
+      - rm -r dist
+
+  # Docker
+  docker:
+    desc: Сборка и публикация образа
+    cmds:
+      - task: docker-lint
+      - task: docker-build
+      - task: docker-push
+
+  docker-lint:
+    desc: Запуск обновления и сборки зависимостей проекта
+    cmd:
+      task: _docker-run
+      vars:
+        CLI_ARGS: "{{ .LINT_IMAGE }} task lint -- {{ .CLI_ARGS }}"
+  docker-build:
+    desc: Запуск сборки и публикации библиотеки
+    cmd:
+      task: _docker-run
+      vars:
+        CLI_ARGS: "{{ .CLI_ARGS }} {{ .COMPILE_IMAGE }} task version build ENVIRONMENT={{ .ENVIRONMENT }}"
+  docker-push:
+    desc: Запуск сборки и публикации библиотеки
+    cmd:
+      task: _docker-run
+      vars:
+        CLI_ARGS: -e POETRY_REPOSITORIES_LIBS_URL="{{ .POETRY_URL }}"
+          -e POETRY_HTTP_BASIC_LIBS_USERNAME="{{ .POETRY_USERNAME }}"
+          -e POETRY_HTTP_BASIC_LIBS_PASSWORD="{{ .POETRY_PASSWORD }}"
+          {{ .CLI_ARGS }}
+          {{ .COMPILE_IMAGE }}
+          task push ENVIRONMENT={{ .ENVIRONMENT }}
+  docker-scan:
+    desc: Запуск обновления и сборки зависимостей проекта
+    cmd:
+      task: _docker-run
+      vars:
+        CLI_ARGS: "{{ .CLI_ARGS }} {{ .COMPILE_IMAGE }} task -v deps ENVIRONMENT={{ .ENVIRONMENT }}"
+  docker-test:
+    desc: Тестирование в контейнере
+    cmd:
+      task: _docker-run
+      vars:
+        CLI_ARGS: -e APP_CONFIG_SOURCE=stub
+          {{ .CLI_ARGS }}
+          {{ .TEST_IMAGE }}
+          task test -v ENVIRONMENT=testing
+
+  # Internal
+  _docker-run:
+    cmd: docker run -ti --rm -v $(pwd):/app/project {{ .CLI_ARGS }}
+    internal: true
+  _fish:
+    cmd: fish -c $'{{ .CLI_ARGS }}'
+    internal: true

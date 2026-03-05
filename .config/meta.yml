@@ -1,0 +1,31 @@
+name: config-multiformat-loader
+version: 1.0.0
+description: Config loader from varios formats
+link: https://github.com/config-multiformat-loader/config-multiformat-loader
+authors:
+  - name: Igor Voropaev
+    email: snake@itpc.ru
+
+python: ">=3.12,<4.0"
+service: config
+files:
+  - pyproject.toml
+
+images:
+  compile: python:12.2
+
+deps:
+  pyjson5: "2.0"
+  pyyaml: "6.0"
+
+linters:
+  version: "12.4"
+  deps:
+    itpc-linters: ^9.0.0
+    types-pyyaml: ^6.0.12
+  flake8:
+    rules:
+      - test_*.py:WPS431
+tests:
+  enable: false
+  version: "12.4"

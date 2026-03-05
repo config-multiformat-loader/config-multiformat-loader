@@ -1,0 +1,207 @@
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[project]
+name = "config-multiformat-loader"
+version = "1.0.0"
+description = "Config loader from varios formats"
+readme = "README.md"
+requires-python = ">=3.12,<4.0"
+authors = [{ name = "Igor Voropaev", email = "snake@itpc.ru" }]
+dependencies = ["pyjson5 ~= 2.0", "pyyaml ~= 6.0"]
+
+[dependency-groups]
+dev = []
+tests = [
+    "pytest ~= 9.0",
+    "pytest-asyncio ~= 1.3",
+    "pytest-cov ~= 7.0",
+    "pytest-mock ~= 3.15",
+    "pytest-rerunfailures ~= 16.1",
+    "pyhamcrest ~= 2.1",
+    "time-machine ~= 3.2",
+]
+linter = [
+    "ruff >=0.15,<0.16",
+    "mypy ~= 1.19",
+    "vulture ~= 2.14",
+    "flake8-pyproject ~= 1.2",
+    "wemake-python-styleguide >=1.5,<1.6",
+    "types-pyyaml ~= 6.0.12",
+]
+
+[project.urls]
+repository = "https://gitlab.itpc.ru/libs/python/config"
+
+# -- Poetry --
+[tool.poetry]
+packages = [{ include = "config" }]
+include = [{ path = "pyproject.toml", format = ["sdist", "wheel"] }]
+
+# -- ruff --
+[tool.ruff]
+line-length = 135
+preview = true
+
+[tool.ruff.lint]
+select = [
+    "F",
+    "E",
+    "W",
+    "C90",
+    "I",
+    "N",
+    "UP",
+    "YTT",
+    "ASYNC",
+    "ASYNC1",
+    "S",
+    "BLE",
+    "B",
+    "A",
+    "COM",
+    "C4",
+    "DTZ",
+    "T10",
+    "DJ",
+    "EXE",
+    "ISC",
+    "ICN",
+    "G",
+    "INP",
+    "PIE",
+    "T20",
+    "PYI",
+    "PT",
+    "Q",
+    "RSE",
+    "RET",
+    "SLF",
+    "SLOT",
+    "SIM",
+    "TID",
+    "INT",
+    "ARG",
+    "PTH",
+    "TD",
+    "FIX",
+    "ERA",
+    "PD",
+    "PGH",
+    "PL",
+    "TRY",
+    "FLY",
+    "NPY",
+    "AIR",
+    "PERF",
+    "FURB",
+    "LOG",
+    "RUF",
+]
+ignore = [
+    "COM812",
+    "ISC001",
+    "TRY003",
+    "PT013",
+    "TID252",
+    "RUF001",
+    "RUF002",
+    "RUF003",
+    "RUF067",
+
+]
+external = ["WPS"]
+
+[tool.ruff.lint.isort]
+section-order = [
+    "future",
+    "typings",
+    "standard-library",
+    "third-party",
+    "first-party",
+    "local-folder",
+]
+
+[tool.ruff.lint.isort.sections]
+"typings" = ['typing']
+
+[tool.ruff.lint.pylint]
+max-args = 15
+max-returns = 10
+max-branches = 30
+
+# -- Flake8 --
+[tool.flake8]
+max-arguments = 12
+max-attributes = 15
+max-awaits = 20
+max-base-classes = 8
+max-expressions = 20
+max-function-expressions = 20
+max-import-from-members = 20
+max-imported-names = 100
+max-imports = 30
+max-line-complexity = 25
+max-line-length = 135
+max-local-variables = 15
+max-match-cases = 20
+max-methods = 20
+max-module-expressions = 15
+max-module-members = 50
+max-name-length = 120
+max-parameters-amount = 25
+max-returns = 20
+max-returns-amount = 10
+max-try-body-length = 20
+exclude = ["__submodules__", ".git", "__samples__"]
+select = ["C90", "E", "F", "W", "WPS"]
+ignore = [
+    "W503",
+    "WPS100",
+    "WPS110",
+    "WPS111",
+    "WPS226",
+    "WPS237",
+    "WPS300",
+    "WPS332",
+    "WPS338",
+    "WPS347",
+    "WPS410",
+    "WPS412",
+    "WPS430",
+    "WPS441",
+    "WPS504",
+    "WPS529",
+    "WPS602",
+    "WPS615",
+    "WPS617",
+
+
+]
+per-file-ignores = ["test_*.py:WPS431,WPS501"]
+
+# -- MyPy --
+[tool.mypy]
+ignore_missing_imports = true
+exclude = ["__samples__"]
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+disable_error_code = ["attr-defined", "abstract"]
+
+# -- Vulture --
+[tool.vulture]
+exclude = [".vscode/", "__samples__/", "tests"]
+ignore_names = []
+
+# -- PyTest --
+[tool.pytest.ini_options]
+markers = ["configuration"]
+asyncio_mode = "strict"
+
+[tool.coverage.run]
+omit = ["tests/*"]
+
+[tool.coverage.report]
+exclude_lines = ["pragma: no cover", "def __repr__", "def __str__"]

@@ -1,0 +1,17 @@
+{
+    "host": "localhost",
+    "port": 8080,
+    "database": {
+        "name": "testdb",
+        "user": "admin",
+        "password": "secret"
+    },
+    "debug": true,
+    "nested": {
+        "level1": {
+            "level2": {
+                "value": "deep"
+            }
+        }
+    }
+}

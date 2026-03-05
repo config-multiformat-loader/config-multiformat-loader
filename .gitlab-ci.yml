@@ -1,0 +1,12 @@
+variables:
+  IMAGE: app:12.2
+  LINT_VERSION: 12.4
+stages:
+  - test
+  - build
+
+include:
+  - project: "devops/gitlab/ci"
+    file: "/python/lint.yml"
+  - project: "devops/gitlab/ci"
+    file: "/python/libs/build.yml"
