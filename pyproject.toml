@@ -27,7 +27,7 @@ linter = [
     "mypy ~= 1.19",
     "vulture ~= 2.14",
     "flake8-pyproject ~= 1.2",
-    "wemake-python-styleguide >=1.5,<1.6",
+    "wemake-python-styleguide >=1.6.1,<1.7",
     "types-pyyaml ~= 6.0.12",
 ]
 
