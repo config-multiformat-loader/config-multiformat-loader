@@ -23,7 +23,7 @@ tests = [
     "time-machine ~= 3.2",
 ]
 linter = [
-    "ruff >=0.15,<0.16",
+    "ruff >=0.15.11,<0.16",
     "mypy ~= 1.19",
     "vulture ~= 2.14",
     "flake8-pyproject ~= 1.2",
